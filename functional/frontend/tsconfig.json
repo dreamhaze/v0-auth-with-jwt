@@ -1,0 +1,25 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./.nuxt/tsconfig.app.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.server.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.shared.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.node.json"
+    }
+  ],
+  "exclude": ["data", "node_modules"],
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "lib": ["ES2020", "DOM"],
+    "module": "ESNext",
+    "types": ["node", "nuxt"],
+    "skipLibCheck": true
+  }
+}
