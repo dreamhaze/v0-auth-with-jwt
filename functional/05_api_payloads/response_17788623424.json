@@ -1,0 +1,12 @@
+{
+  "id": 38,
+  "email": "test1@test.com",
+  "name": "testovii",
+  "phone": null,
+  "role": "user",
+  "isPro": false,
+  "isAdmin": false,
+  "isBlocked": false,
+  "paidDownloadCredits": 0,
+  "subscriptionExpiresAt": null
+}
