@@ -33,8 +33,7 @@ export const useUserStore = defineStore('user', () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  const config = useRuntimeConfig();
-  const apiUrl = config.public.apiUrl;
+  const config = useRuntimeConfig()
 
   /**
    * Fetch user data from /api/auth/me
@@ -56,18 +55,18 @@ export const useUserStore = defineStore('user', () => {
   };
 
   /**
-   * Fetch export quota from /api/variants/export/quota
+   * Fetch export quota from /api/variants/quota
    */
   const fetchQuota = async () => {
     try {
-      const data = await $fetch<ExportQuota>(`${apiUrl}/variants/export/quota`);
-      quota.value = data;
-      return data;
+      const data = await $fetch<ExportQuota>('/api/variants/quota')
+      quota.value = data
+      return data
     } catch (err) {
-      console.error('Failed to fetch quota:', err);
-      return null;
+      console.error('[v0] Failed to fetch quota:', err)
+      return null
     }
-  };
+  }
 
   /**
    * Update user locally (after profile update)
