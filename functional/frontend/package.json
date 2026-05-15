@@ -10,7 +10,6 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@iconify-json/lucide": "^1.2.106",
     "@pinia/nuxt": "^0.5.0",
     "nuxt": "^4.4.2",
     "nuxt-auth-utils": "^0.5.29",

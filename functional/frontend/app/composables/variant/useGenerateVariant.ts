@@ -16,17 +16,18 @@ export const useGenerateVariant = () => {
     refreshLoadingByTask,
     statusMessage,
     checkedAnswers,
+    useSelected,
   } = useVariantState();
 
   const config = useRuntimeConfig();
-  const { isAuthenticated, openLoginModal } = useAuth();
+  const { isAuthenticated, openLoginModal, isLocked } = useAuth();
+  const { showPaywall } = useSubscription();
+
   const { apiWithAuth } = useAuthApi();
 
   const apiUrl = import.meta.server
     ? config.apiBackendUrl
     : config.public.apiUrl;
-
-  console.log('API URL: ', apiUrl);
 
   const buildPayload = () => ({
     selectedWorkId: selectedWorkId.value,
@@ -35,6 +36,7 @@ export const useGenerateVariant = () => {
     selectedPoemId: selectedPoemId.value,
     selectedThemeId: selectedThemeId.value,
     selectedBlock3AuthorId: '',
+    useSelected: useSelected.value,
   });
 
   /**
@@ -58,12 +60,13 @@ export const useGenerateVariant = () => {
     }
 
     // Public request (no auth)
-    const fullUrl = url.startsWith('/') ? `${apiUrl}${url}` : `${apiUrl}/${url}`;
+    const fullUrl = url.startsWith('/')
+      ? `${apiUrl}${url}`
+      : `${apiUrl}/${url}`;
     return $fetch<T>(fullUrl, options);
   };
 
   const pregenerateVariant = async () => {
-    console.log('pregenerateVariant: ', apiUrl);
     const pregeneratedUrl = `${apiUrl}/variants/runtime/pregenerated`;
     try {
       const data = await $fetch<{ variant: GeneratedVariant }>(pregeneratedUrl);
@@ -80,11 +83,7 @@ export const useGenerateVariant = () => {
    */
   const generateVariant = async () => {
     // Check auth first
-    if (!isAuthenticated.value) {
-      openLoginModal();
-      statusMessage.value = 'Для генерации варианта необходимо войти';
-      return;
-    }
+    if (!checkSubscription()) return;
 
     refreshLoadingByBlock.value.block1 = true;
     refreshLoadingByBlock.value.block2 = true;
@@ -104,7 +103,8 @@ export const useGenerateVariant = () => {
       checkedAnswers.value.clear();
     } catch (e) {
       if ((e as Error).message !== 'Требуется авторизация') {
-        statusMessage.value = (e as Error).message || 'Ошибка генерации варианта';
+        statusMessage.value =
+          (e as Error).message || 'Ошибка генерации варианта';
       }
     } finally {
       refreshLoadingByBlock.value.block1 = false;
@@ -118,11 +118,7 @@ export const useGenerateVariant = () => {
    */
   const refreshBlock = async (block: RuntimeVariantBlockKey) => {
     // Check auth first
-    if (!isAuthenticated.value) {
-      openLoginModal();
-      statusMessage.value = 'Для обновления блока необходимо войти';
-      return;
-    }
+    if (!checkSubscription()) return;
 
     refreshLoadingByBlock.value[block] = true;
     try {
@@ -142,7 +138,8 @@ export const useGenerateVariant = () => {
       checkedAnswers.value.clear();
     } catch (e) {
       if ((e as Error).message !== 'Требуется авторизация') {
-        statusMessage.value = (e as Error).message || `Ошибка обновления блока ${block}`;
+        statusMessage.value =
+          (e as Error).message || `Ошибка обновления блока ${block}`;
       }
     } finally {
       refreshLoadingByBlock.value[block] = false;
@@ -154,11 +151,7 @@ export const useGenerateVariant = () => {
    */
   const refreshTask = async (taskKey: VariantTaskKey) => {
     // Check auth first
-    if (!isAuthenticated.value) {
-      openLoginModal();
-      statusMessage.value = 'Для обновления задания необходимо войти';
-      return;
-    }
+    if (!checkSubscription()) return;
 
     refreshLoadingByTask.value[taskKey] = true;
     try {
@@ -178,11 +171,26 @@ export const useGenerateVariant = () => {
       checkedAnswers.value.delete(taskKey);
     } catch (e) {
       if ((e as Error).message !== 'Требуется авторизация') {
-        statusMessage.value = (e as Error).message || `Ошибка обновления задания ${taskKey}`;
+        statusMessage.value =
+          (e as Error).message || `Ошибка обновления задания ${taskKey}`;
       }
     } finally {
       refreshLoadingByTask.value[taskKey] = false;
     }
+  };
+
+  const checkSubscription = () => { 
+    if (!isAuthenticated.value) {
+      openLoginModal();
+      statusMessage.value = 'Для обновления блока необходимо войти';
+      return false;
+    } else if (isLocked.value) {
+      showPaywall();
+      statusMessage.value =
+        'Обновления варианта ограничены. Пожалуйста, оформите подписку.';
+      return false;
+    }
+    return true;
   };
 
   return {

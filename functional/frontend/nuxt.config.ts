@@ -6,7 +6,7 @@ export default defineNuxtConfig({
 
   css: ['~/assets/styles/main.scss', '~/assets/styles/nuxt-ui.css'],
   modules: ['nuxt-auth-utils', '@pinia/nuxt', '@nuxt/ui'],
-  ui: { fonts: false }, // disable the @nuxt/fonts module.
+  ui: { fonts: false },
   icon: {
     serverBundle: {
       collections: ['lucide'],
@@ -63,19 +63,19 @@ export default defineNuxtConfig({
 
   // Proxy configuration for local development
   nitro: {
-    devProxy: {
-      '/api': {
-        target:
-          process.env.NUXT_API_BACKEND_BASE || 'http://localhost:8000/api',
-        changeOrigin: true,
-      },
-    },
-    storage: {
-      cache: {
-        driver: 'redis',
-        url: process.env.NITRO_STORAGE_CACHE || 'redis://redis-cache:6379/0',
-      },
-    },
+    // devProxy: {
+    //   '/api': {
+    //     target:
+    //       process.env.NUXT_API_BACKEND_BASE || 'http://localhost:8000/api',
+    //     changeOrigin: true,
+    //   },
+    // },
+    // storage: {
+    //   cache: {
+    //     driver: 'redis',
+    //     url: process.env.NITRO_STORAGE_CACHE || 'redis://redis-cache:6379/0',
+    //   },
+    // },
   },
 
   vite: {
