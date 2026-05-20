@@ -35,17 +35,68 @@ export const useAuth = () => {
    * Login - calls our API which proxies to backend and sets JWT tokens in session
    */
   const login = async (email: string, password: string) => {
+    console.log('[useAuth.login] Started', {
+      email,
+      timestamp: new Date().toISOString(),
+    });
+
     isLoading.value = true;
     error.value = null;
+
     try {
+      console.log('[useAuth.login] Calling /api/auth/login');
       const result = await $fetch('/api/auth/login', {
         method: 'POST',
         body: { email, password },
       });
-      // Refresh session after login to get tokens
+
+      console.log('[useAuth.login] Login API response:', {
+        success: result.success,
+        hasUser: !!result.user,
+        userId: result.user?.id,
+      });
+
+      console.log('[useAuth.login] About to call fetchSession()');
+
+      // Add small delay to ensure server has set cookies
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       await fetchSession();
+
+      console.log('[useAuth.login] After fetchSession() - checking state:', {
+        loggedIn: loggedIn.value,
+        userId: user.value?.id,
+        hasSession: !!session.value,
+        sessionUser: session.value?.user,
+        hasAccessToken: !!session.value?.accessToken,
+      });
+
+      // Verify session was actually set
+      if (!loggedIn.value || !user.value) {
+        console.warn(
+          '[useAuth.login] Session not properly set after fetchSession',
+        );
+
+        // Try one more fetch after a short delay
+        console.log('[useAuth.login] Retrying fetchSession after 200ms...');
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        await fetchSession();
+
+        console.log('[useAuth.login] After second fetchSession:', {
+          loggedIn: loggedIn.value,
+          userId: user.value?.id,
+        });
+      }
+
       return result;
     } catch (err) {
+      console.error('[useAuth.login] Error during login:', {
+        error: err,
+        message: err.message,
+        status: err.status,
+        data: err.data,
+      });
+
       const fetchError = err as {
         data?: { message?: string };
         statusMessage?: string;
@@ -56,10 +107,11 @@ export const useAuth = () => {
         'Ошибка входа';
       throw err;
     } finally {
+      console.log('[useAuth.login] Finished, isLoading set to false');
       isLoading.value = false;
     }
   };
-
+  
   /**
    * Register - calls our API which proxies to backend and sets JWT tokens in session
    */
@@ -90,29 +142,24 @@ export const useAuth = () => {
   };
 
   /**
-   * Logout - clears session and JWT tokens
+   * Logout function with debugging
    */
   const logout = async () => {
-    isLoading.value = true;
-    error.value = null;
+    console.log('[useAuth.logout] Started');
+
     try {
-      await $fetch('/api/auth/logout', {
-        method: 'POST',
-      });
+      await $fetch('/api/auth/logout', { method: 'POST' });
       await clearSession();
-      await router.push('/');
+
+      console.log('[useAuth.logout] After clearSession:', {
+        loggedIn: loggedIn.value,
+        user: user.value,
+      });
+
+      router.push('/login');
     } catch (err) {
-      const fetchError = err as {
-        data?: { message?: string };
-        statusMessage?: string;
-      };
-      error.value =
-        fetchError?.data?.message ||
-        fetchError?.statusMessage ||
-        'Ошибка при выходе';
+      console.error('[useAuth.logout] Error:', err);
       throw err;
-    } finally {
-      isLoading.value = false;
     }
   };
 
@@ -245,5 +292,9 @@ export const useAuth = () => {
     closeLoginModal,
     isLoginModalOpen,
     activeAuthTab,
+
+    // Debug
+    loggedIn,
+    clearSession,
   };
 };

@@ -179,7 +179,7 @@ export const useGenerateVariant = () => {
     }
   };
 
-  const checkSubscription = () => { 
+  const checkSubscription = () => {
     if (!isAuthenticated.value) {
       openLoginModal();
       statusMessage.value = 'Для обновления блока необходимо войти';
