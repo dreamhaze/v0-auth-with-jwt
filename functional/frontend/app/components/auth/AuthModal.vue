@@ -17,7 +17,7 @@ const isSubmitting = ref(false);
 
 const consentOffer = ref(true);
 const consentPrivacy = ref(true);
-const consentAds = ref(true);
+const consentAds = ref(true); 
 
 const activeTab = computed<'login' | 'register'>(
   () => (route.query.modal as 'login' | 'register') || 'login',
@@ -89,7 +89,6 @@ const handleClose = () => {
   name.value = '';
   localError.value = null;
 };
-const showLiterary = ref(true);
 </script>
 
 <template>
@@ -141,37 +140,6 @@ const showLiterary = ref(true);
       </PrimaryButton>
 
       <AuthToggleRegisterBtn />
-
-      <div v-if="activeTab === 'register'" class="register-checkboxes">
-        <BaseCheckbox v-model="showLiterary">
-          <template #label>
-            Принимаю условия
-            <a href="/terms">Оферты на заключение лицензионного соглашения </a>
-          </template>
-        </BaseCheckbox>
-        <BaseCheckbox v-model="showLiterary">
-          <template #label>
-            Выражаю
-            <a href="/privacy">
-              Согласие на обработку персональных данных в соответствии с
-              условиями Политики конфиденциальности
-            </a>
-          </template>
-        </BaseCheckbox>
-        <!-- <BaseCheckbox v-model="showLiterary">
-          <template #label>
-            Выражаю
-            <a href="/terms">
-              Согласие на получение рассылки рекламно-информационных материалов
-            </a>
-          </template>
-        </BaseCheckbox> -->
-      </div>
     </template>
   </BaseModal>
 </template>
-<style lang="scss">
-.register-checkboxes > label {
-  margin-bottom: 10px;
-}
-</style>

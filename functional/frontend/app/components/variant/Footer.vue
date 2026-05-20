@@ -3,25 +3,49 @@ defineProps<{
   blockBtns: boolean;
 }>();
 
+const { isAuthenticated } = useAuth();
 const { useSelected } = useVariantState();
-const { generateVariant } = useGenerateVariant();
+const { generateVariant, refreshAllTasks } = useGenerateVariant();
+const { showPaywall } = useSubscription();
 
 const generateWithSelected = async () => {
+  if (!isAuthenticated.value) {
+    showPaywall();
+    return;
+  }
   useSelected.value = true;
   await generateVariant();
   useSelected.value = false;
 };
-const handleNav = (e: string) => console.log('click handle: ' + e);
+
+const handleNewVariant = async () => {
+  if (!isAuthenticated.value) {
+    showPaywall();
+    return;
+  }
+  await generateVariant();
+};
+
+const handleRefreshAll = async () => {
+  if (!isAuthenticated.value) {
+    showPaywall();
+    return;
+  }
+  await refreshAllTasks();
+};
 </script>
 
 <template>
   <div class="w-full">
+    <!-- Action Panel for download/print/save/share -->
+    <VariantActionPanel :disabled="blockBtns || !isAuthenticated" class="mb-5" />
+    
     <div class="flex items-center justify-between mb-[20px] gap-3">
       <WhiteButton
         icon="i-lucide-file"
         class="white-btn w-full h-[50px] whitespace-nowrap"
-        :disabled="blockBtns"
-        @click="generateVariant"
+        :disabled="blockBtns || !isAuthenticated"
+        @click="handleNewVariant"
       >
         Новый рандомный вариант
       </WhiteButton>
@@ -29,20 +53,12 @@ const handleNav = (e: string) => console.log('click handle: ' + e);
       <WhiteButton
         icon="i-lucide-rotate-cw"
         class="white-btn w-full h-[50px] whitespace-nowrap"
-        :disabled="blockBtns"
-        @click="generateWithSelected"
+        :disabled="blockBtns || !isAuthenticated"
+        @click="handleRefreshAll"
       >
         Обновить все задания в варианте
       </WhiteButton>
     </div>
-    <div v-if="false" class="flex items-center justify-between mb-3 gap-3">
-      <WhiteButton previous @click="handleNav('next')" :disabled="blockBtns">
-        Предыдущий вариант
-      </WhiteButton>
-
-      <WhiteButton next @click="handleNav('previous')" :disabled="blockBtns">
-        Следующий вариант
-      </WhiteButton>
-    </div>
   </div>
 </template>
+
