@@ -22,16 +22,40 @@ useHead({
 
 const { variant, isInitialLoading } = useVariantState();
 const { pregenerateVariant } = useGenerateVariant();
+const variantsStore = useVariantsStore();
+const isLoading = computed(() => variantsStore.isLoading);
+
+const sentinelRef = ref<HTMLElement>();
+const isEndOfPage = ref(false);
+let observer;
 // Initial fetch logic
 onMounted(async () => {
   if (!variant.value) {
-    await pregenerateVariant();
+    const res = await pregenerateVariant();
+    console.log('Pregenerate result:', res);
+
+    isInitialLoading.value = false;
   }
-  isInitialLoading.value = false;
+
+  const threshold = 300;
+  if (typeof window === 'undefined' || !sentinelRef.value) return;
+  observer = new IntersectionObserver(
+    ([entry]) => {
+      isEndOfPage.value = entry.isIntersecting;
+    },
+    {
+      rootMargin: `0px 0px ${threshold}px 0px`,
+      threshold: 0,
+    },
+  );
+
+  observer.observe(sentinelRef.value);
 });
 </script>
 
 <template>
+  <GlobalLoader v-if="isLoading" />
+
   <div class="w-full max-w-[956px] text-[#333333] mt-8">
     <VariantCreateHeading />
   </div>
@@ -39,11 +63,8 @@ onMounted(async () => {
     <VariantCreate />
   </div>
 
-  <VariantPanel />
+  <div ref="sentinelRef" class="h-px" />
+  <VariantPanelFixed v-if="!isEndOfPage" />
 </template>
 
-<style>
-.prose p {
-  margin-bottom: 0.5rem;
-}
-</style>
+<style></style>

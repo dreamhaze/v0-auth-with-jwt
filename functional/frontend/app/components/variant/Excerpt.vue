@@ -3,6 +3,8 @@ interface Props {
   excerptText?: string;
   excerptAuthor?: string;
   excerptWork?: string;
+  textColumns?: number;
+  textSecondColumn?: string;
 }
 
 defineProps<Props>();
@@ -13,7 +15,10 @@ const {
   prevTitle,
 } = useNavigateScene();
 
+const { settings } = useKnowledgeBase();
 const { hasPrevious, hasNext } = scene.value;
+
+const { isLocked } = useAuth();
 
 const handleNav = (key: 'previous' | 'next') => {
   navigate(key);
@@ -22,16 +27,26 @@ const handleNav = (key: 'previous' | 'next') => {
 <template>
   <div class="w-full bg-white rounded-[10px] mb-3 p-[30px_40px_50px_30px]">
     <VariantTaskInstruction>
-      Прочитайте приведённый ниже фрагмент художественного произведения и
-      выполните задания 1–3, 4.1 или 4.2 (на выбор) и задание 5.
+      {{ settings.variantTexts.part1Intro }}
     </VariantTaskInstruction>
 
-    <div class="prose prose-sm max-w-none mb-4">
+    <div class="prose prose-sm max-w-none mb-4" v-if="textColumns !== 2">
       <p
         v-html="
           excerptText || 'Текст отрывка не загрузился, попробуйте ещё раз'
         "
       ></p>
+    </div>
+    <div v-else class="flex gap-8 mb-4">
+      <div class="prose prose-sm max-w-none flex-1">
+        <p v-html="excerptText"></p>
+      </div>
+      <div
+        v-if="textSecondColumn"
+        class="prose prose-sm max-w-none flex-1 border-l pl-8"
+      >
+        <p v-html="textSecondColumn"></p>
+      </div>
     </div>
     <div class="flex justify-end">
       <p class="text-base font-semibold text-gray-600">
@@ -40,11 +55,21 @@ const handleNav = (key: 'previous' | 'next') => {
     </div>
 
     <div class="prose-nav pt-7 flex justify-between items-center">
-      <BaseButton v-show="hasNext" previous @click="handleNav('next')">
+      <BaseButton
+        v-show="hasNext"
+        :isLocked="isLocked"
+        previous
+        @click="handleNav('next')"
+      >
         Предыдущая сцена
       </BaseButton>
       <div class="opacity-0"><span>_</span></div>
-      <BaseButton v-show="hasPrevious" next @click="handleNav('previous')">
+      <BaseButton
+        v-show="hasPrevious"
+        :isLocked="isLocked"
+        next
+        @click="handleNav('previous')"
+      >
         Следующая сцена
       </BaseButton>
     </div>

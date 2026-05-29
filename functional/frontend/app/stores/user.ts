@@ -33,17 +33,16 @@ export const useUserStore = defineStore('user', () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  const config = useRuntimeConfig()
-
   /**
-   * Fetch user data from /api/auth/me
+   * Fetch user data from backend auth endpoint
    */
   const fetchUser = async () => {
     isLoading.value = true;
     error.value = null;
     try {
-      const data = await $fetch<User>('/api/auth/me');
-      user.value = data;
+      const authApi = useAuthApi();
+      const data = await authApi.apiWithAuth<User>('/auth/me');
+      setUser(data);
       return data;
     } catch (err) {
       const fetchError = err as { data?: { message?: string } };
@@ -55,18 +54,19 @@ export const useUserStore = defineStore('user', () => {
   };
 
   /**
-   * Fetch export quota from /api/variants/quota
+   * Fetch export quota from backend endpoint
    */
   const fetchQuota = async () => {
     try {
-      const data = await $fetch<ExportQuota>('/api/variants/quota')
-      quota.value = data
-      return data
+      const authApi = useAuthApi();
+      const data = await authApi.apiWithAuth<ExportQuota>('/variants/quota');
+      quota.value = data;
+      return data;
     } catch (err) {
-      console.error('[v0] Failed to fetch quota:', err)
-      return null
+      console.error('[v0] Failed to fetch quota:', err);
+      return null;
     }
-  }
+  };
 
   /**
    * Update user locally (after profile update)

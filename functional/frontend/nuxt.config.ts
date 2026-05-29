@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   ssr: true,
 
   css: ['~/assets/styles/main.scss', '~/assets/styles/nuxt-ui.css'],
-  modules: ['nuxt-auth-utils', '@pinia/nuxt', '@nuxt/ui'],
+  modules: ['@pinia/nuxt', '@nuxt/ui'],
   ui: { fonts: false },
   icon: {
     serverBundle: {
@@ -33,21 +33,6 @@ export default defineNuxtConfig({
     port: 3003,
   },
 
-  auth: {
-    session: {
-      cookie: {
-        name: 'auth.session',
-        sameSite: 'lax',
-        domain: undefined,
-        secure: false,
-        // secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/',
-      },
-    },
-  },
-
   components: [
     {
       path: '~/components/',
@@ -60,11 +45,10 @@ export default defineNuxtConfig({
       prefix: '',
     },
   ],
-
   runtimeConfig: {
     // Server-only runtime config
     apiBackendBase:
-      process.env.NUXT_API_BACKEND_BASE + '/api' || 'http://localhost:8000/api',
+      process.env.NUXT_API_BACKEND_BASE || 'http://localhost:8000/api',
     apiBackendUrl:
       process.env.NUXT_API_BACKEND_URL || 'http://localhost:8000/api/v1',
     // YooKassa credentials (server-only)
@@ -72,9 +56,10 @@ export default defineNuxtConfig({
     yookassaSecretKey: process.env.YOOKASSA_SECRET_KEY || '',
 
     public: {
-      apiUrl: process.env.NUXT_LOCAL_DEVELOPMENT
-        ? 'http://localhost:8000/api'
-        : process.env.NUXT_PUBLIC_API_BASE || '/api',
+      // Client-side: requests go directly to backend
+      apiUrl: process.env.NUXT_PUBLIC_BACKEND_API_URL || '/api/v1',
+      // Client-side: nitro routes
+      nitroApiUrl: process.env.NUXT_PUBLIC_NITRO_API_URL || '/api',
       localMode: process.env.NUXT_LOCAL_DEVELOPMENT === 'true',
     },
     sessionPassword: process.env.NUXT_SESSION_PASSWORD,
@@ -99,12 +84,6 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: ['@vue/devtools-core', '@vue/devtools-kit', 'pinia'],
-      exclude: ['html2canvas', 'jspdf'],
-    },
-    build: {
-      rollupOptions: {
-        external: ['html2canvas', 'jspdf'],
-      },
     },
   },
 });

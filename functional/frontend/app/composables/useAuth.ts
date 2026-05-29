@@ -1,8 +1,8 @@
 /**
- * Authentication composable using nuxt-auth-utils with JWT tokens
+ * Authentication composable for direct JWT auth with the backend.
  *
- * Uses sealed session cookies to store JWT tokens (accessToken, refreshToken)
- * The tokens are used for backend API authentication
+ * Stores access and refresh tokens in client cookies and sends Bearer tokens
+ * directly to backend `/auth/*` endpoints.
  */
 
 export interface AuthUser {
@@ -13,159 +13,333 @@ export interface AuthUser {
   role: 'user' | 'admin';
   isPro: boolean;
   isBlocked: boolean;
+  isAdmin: boolean;
+  subscriptionExpiresAt: string | null;
+  paidDownloadCredits: number;
 }
+
+interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUser;
+}
+
+type FetchOptions = Parameters<typeof $fetch>[1];
+
+const STORAGE_COOKIE_OPTIONS = {
+  sameSite: 'lax',
+  path: '/',
+  secure: process.env.NODE_ENV === 'production',
+};
 
 export const useAuth = () => {
   const router = useRouter();
   const route = useRoute();
+  const config = useRuntimeConfig();
 
-  // Use the built-in session composable from nuxt-auth-utils
-  const {
-    loggedIn,
-    user,
-    session,
-    fetch: fetchSession,
-    clear: clearSession,
-  } = useUserSession();
+  const userStore = useUserStore();
+  const { hasActiveSubscription } = storeToRefs(userStore);
+
+  const accessToken = useCookie<string | null>(
+    'auth.accessToken',
+    STORAGE_COOKIE_OPTIONS,
+  );
+  const refreshToken = useCookie<string | null>(
+    'auth.refreshToken',
+    STORAGE_COOKIE_OPTIONS,
+  );
+  const user = useCookie<AuthUser | null>('auth.user', STORAGE_COOKIE_OPTIONS);
 
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  /**
-   * Login - calls our API which proxies to backend and sets JWT tokens in session
-   */
-  const login = async (email: string, password: string) => {
-    console.log('[useAuth.login] Started', {
-      email,
-      timestamp: new Date().toISOString(),
-    });
+  const apiUrl = computed(() => config.public.apiUrl.replace(/\/$/, ''));
 
-    isLoading.value = true;
-    error.value = null;
+  const buildUrl = (path: string) => {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    return `${apiUrl.value}${path.startsWith('/') ? path : `/${path}`}`;
+  };
+
+  const normalizeError = (error: unknown) => {
+    const err = error as any;
+    if (err?.data?.message) return err.data.message;
+    if (err?.statusMessage) return err.statusMessage;
+    if (typeof err?.message === 'string') return err.message;
+    return 'Произошла ошибка при запросе';
+  };
+
+  const isUnauthorizedError = (error: unknown) => {
+    const err = error as any;
+    return (
+      err?.status === 401 ||
+      err?.statusCode === 401 ||
+      err?.statusCode === '401'
+    );
+  };
+
+  const setSession = (payload: AuthResponse) => {
+    accessToken.value = payload.accessToken;
+    refreshToken.value = payload.refreshToken;
+    user.value = payload.user;
+  };
+
+  const clearSession = () => {
+    accessToken.value = null;
+    refreshToken.value = null;
+    user.value = null;
+  };
+
+  const session = computed(() => ({
+    user: user.value,
+    accessToken: accessToken.value,
+    refreshToken: refreshToken.value,
+  }));
+
+  const fetchSession = async () => {
+    await validateSession();
+  };
+
+  const fetchJson = async <T>(path: string, options: FetchOptions = {}) => {
+    try {
+      return await $fetch<T>(buildUrl(path), {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+        ...options,
+      });
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const refreshTokens = async (): Promise<boolean> => {
+    if (!refreshToken.value) {
+      return false;
+    }
 
     try {
-      console.log('[useAuth.login] Calling /api/auth/login');
-      const result = await $fetch('/api/auth/login', {
+      const payload = await fetchJson<AuthResponse>('/auth/refresh', {
+        method: 'POST',
+        body: { refreshToken: refreshToken.value },
+      });
+      setSession(payload);
+      return true;
+    } catch (error) {
+      clearSession();
+      return false;
+    }
+  };
+
+  const fetchWithAuth = async <T>(
+    path: string,
+    options: FetchOptions = {},
+    retry = true,
+  ): Promise<T> => {
+    if (!accessToken.value && refreshToken.value) {
+      await refreshTokens();
+    }
+
+    if (!accessToken.value) {
+      throw new Error('Требуется авторизация');
+    }
+
+    try {
+      return await fetchJson<T>(path, {
+        ...options,
+        headers: {
+          ...(options.headers || {}),
+          Authorization: `Bearer ${accessToken.value}`,
+        },
+      });
+    } catch (error) {
+      if (isUnauthorizedError(error) && retry) {
+        const refreshed = await refreshTokens();
+        if (refreshed && accessToken.value) {
+          return fetchWithAuth<T>(path, options, false);
+        }
+        clearSession();
+      }
+      throw error;
+    }
+  };
+
+  const apiWithAuth = async <T>(
+    path: string,
+    options: FetchOptions = {},
+  ): Promise<T> => {
+    return fetchWithAuth<T>(path, options);
+  };
+
+  /**
+   * Фетчит данные с авторизацией, но НЕ выбрасывает ошибку при отсутствии токенов.
+   * Возвращает:
+   * - Данные (если авторизация успешна)
+   * - null (если токенов нет или они невалидны)
+   */
+  const fetchWithAuthSafe = async <T>(
+    path: string,
+    options: FetchOptions = {},
+    retry = true,
+  ): Promise<T | null> => {
+    // Пытаемся обновить токены, если есть refreshToken
+    if (!accessToken.value && refreshToken.value) {
+      await refreshTokens();
+    }
+
+    // Если всё равно нет accessToken — возвращаем null
+    if (!accessToken.value) {
+      return null;
+    }
+
+    try {
+      return await fetchJson<T>(path, {
+        ...options,
+        headers: {
+          ...(options.headers || {}),
+          Authorization: `Bearer ${accessToken.value}`,
+        },
+      });
+    } catch (error) {
+      if (isUnauthorizedError(error) && retry) {
+        const refreshed = await refreshTokens();
+        if (refreshed && accessToken.value) {
+          return fetchWithAuthSafe<T>(path, options, false);
+        }
+        clearSession();
+        return null;
+      }
+      // Для других ошибок (не 401) — возвращаем null
+      return null;
+    }
+  };
+
+  /**
+   * Проверяет текущего пользователя (/auth/me) и возвращает:
+   * - Данные пользователя (если авторизован)
+   * - null (если не авторизован)
+   */
+  const checkMe = async (): Promise<AuthUser | null> => {
+    const profile = await fetchWithAuthSafe<AuthUser>('/auth/me', {
+      method: 'GET',
+    });
+
+    if (profile) {
+      user.value = profile;
+    }
+
+    return profile;
+  };
+
+  const validateSession = async (): Promise<boolean> => {
+    console.log('validateSession:');
+    if (!accessToken.value && !refreshToken.value) {
+      return false;
+    }
+
+    if (!user.value) {
+      try {
+        const profile = await fetchWithAuth<AuthUser>('/auth/me', {
+          method: 'GET',
+        });
+        console.log('profile from validateSession 1:', profile);
+        console.log('subscriptionExpiresAt:', profile.subscriptionExpiresAt);
+        user.value = profile;
+        return true;
+      } catch {
+        if (refreshToken.value) {
+          const refreshed = await refreshTokens();
+          if (refreshed) {
+            try {
+              const profile = await fetchWithAuth<AuthUser>('/auth/me', {
+                method: 'GET',
+              });
+              console.log('profile from validateSession 2:', profile);
+              console.log(
+                'subscriptionExpiresAt:',
+                profile.subscriptionExpiresAt,
+              );
+              user.value = profile;
+              return true;
+            } catch {
+              clearSession();
+            }
+          }
+        }
+        return false;
+      }
+    }
+
+    try {
+      await fetchWithAuth('/auth/me', { method: 'GET' });
+      return true;
+    } catch {
+      if (refreshToken.value) {
+        const refreshed = await refreshTokens();
+        if (refreshed) {
+          try {
+            const profile = await fetchWithAuth<AuthUser>('/auth/me', {
+              method: 'GET',
+            });
+            console.log('profile from validateSession 3:', profile);
+            console.log(
+              'subscriptionExpiresAt:',
+              profile.subscriptionExpiresAt,
+            );
+            user.value = profile;
+            return true;
+          } catch {
+            clearSession();
+          }
+        }
+      }
+      return false;
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const payload = await fetchJson<AuthResponse>('/auth/login', {
         method: 'POST',
         body: { email, password },
       });
-
-      console.log('[useAuth.login] Login API response:', {
-        success: result.success,
-        hasUser: !!result.user,
-        userId: result.user?.id,
-      });
-
-      console.log('[useAuth.login] About to call fetchSession()');
-
-      // Add small delay to ensure server has set cookies
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      await fetchSession();
-
-      console.log('[useAuth.login] After fetchSession() - checking state:', {
-        loggedIn: loggedIn.value,
-        userId: user.value?.id,
-        hasSession: !!session.value,
-        sessionUser: session.value?.user,
-        hasAccessToken: !!session.value?.accessToken,
-      });
-
-      // Verify session was actually set
-      if (!loggedIn.value || !user.value) {
-        console.warn(
-          '[useAuth.login] Session not properly set after fetchSession',
-        );
-
-        // Try one more fetch after a short delay
-        console.log('[useAuth.login] Retrying fetchSession after 200ms...');
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        await fetchSession();
-
-        console.log('[useAuth.login] After second fetchSession:', {
-          loggedIn: loggedIn.value,
-          userId: user.value?.id,
-        });
-      }
-
-      return result;
-    } catch (err) {
-      console.error('[useAuth.login] Error during login:', {
-        error: err,
-        message: err.message,
-        status: err.status,
-        data: err.data,
-      });
-
-      const fetchError = err as {
-        data?: { message?: string };
-        statusMessage?: string;
-      };
-      error.value =
-        fetchError?.data?.message ||
-        fetchError?.statusMessage ||
-        'Ошибка входа';
-      throw err;
+      setSession(payload);
+      return payload;
+    } catch (error) {
+      error.value = normalizeError(error);
+      throw error;
     } finally {
-      console.log('[useAuth.login] Finished, isLoading set to false');
       isLoading.value = false;
     }
   };
-  
-  /**
-   * Register - calls our API which proxies to backend and sets JWT tokens in session
-   */
+
   const register = async (email: string, password: string, name?: string) => {
     isLoading.value = true;
     error.value = null;
     try {
-      const result = await $fetch('/api/auth/register', {
+      const payload = await fetchJson<AuthResponse>('/auth/register', {
         method: 'POST',
         body: { email, password, name },
       });
-      // Refresh session after registration to get tokens
-      await fetchSession();
-      return result;
-    } catch (err) {
-      const fetchError = err as {
-        data?: { message?: string };
-        statusMessage?: string;
-      };
-      error.value =
-        fetchError?.data?.message ||
-        fetchError?.statusMessage ||
-        'Ошибка регистрации';
-      throw err;
+      setSession(payload);
+      return payload;
+    } catch (error) {
+      error.value = normalizeError(error);
+      throw error;
     } finally {
       isLoading.value = false;
     }
   };
 
-  /**
-   * Logout function with debugging
-   */
   const logout = async () => {
-    console.log('[useAuth.logout] Started');
-
-    try {
-      await $fetch('/api/auth/logout', { method: 'POST' });
-      await clearSession();
-
-      console.log('[useAuth.logout] After clearSession:', {
-        loggedIn: loggedIn.value,
-        user: user.value,
-      });
-
-      router.push('/login');
-    } catch (err) {
-      console.error('[useAuth.logout] Error:', err);
-      throw err;
-    }
+    clearSession();
+    router.push('/login');
   };
 
-  /**
-   * Update user profile
-   */
   const updateProfile = async (payload: {
     name?: string;
     email?: string;
@@ -174,31 +348,20 @@ export const useAuth = () => {
     isLoading.value = true;
     error.value = null;
     try {
-      const result = await $fetch('/api/auth/profile', {
+      const update = await fetchWithAuth<AuthUser>('/auth/profile', {
         method: 'PUT',
         body: payload,
       });
-      // Refresh session to get updated user data
-      await fetchSession();
-      return result;
-    } catch (err) {
-      const fetchError = err as {
-        data?: { message?: string };
-        statusMessage?: string;
-      };
-      error.value =
-        fetchError?.data?.message ||
-        fetchError?.statusMessage ||
-        'Ошибка обновления профиля';
-      throw err;
+      user.value = update;
+      return update;
+    } catch (error) {
+      error.value = normalizeError(error);
+      throw error;
     } finally {
       isLoading.value = false;
     }
   };
 
-  /**
-   * Change password
-   */
   const changePassword = async (
     currentPassword: string,
     newPassword: string,
@@ -206,31 +369,21 @@ export const useAuth = () => {
     isLoading.value = true;
     error.value = null;
     try {
-      await $fetch('/api/auth/change-password', {
+      await fetchWithAuth('/auth/change-password', {
         method: 'POST',
         body: {
           oldPassword: currentPassword,
           newPassword,
         },
       });
-    } catch (err) {
-      const fetchError = err as {
-        data?: { message?: string };
-        statusMessage?: string;
-      };
-      error.value =
-        fetchError?.data?.message ||
-        fetchError?.statusMessage ||
-        'Ошибка смены пароля';
-      throw err;
+    } catch (error) {
+      error.value = normalizeError(error);
+      throw error;
     } finally {
       isLoading.value = false;
     }
   };
 
-  /**
-   * Open login modal
-   */
   const openLoginModal = (tab: 'login' | 'register' = 'login') => {
     router.push({
       path: route.path,
@@ -238,9 +391,6 @@ export const useAuth = () => {
     });
   };
 
-  /**
-   * Close login modal
-   */
   const closeLoginModal = () => {
     const { modal: _, ...restQuery } = route.query;
     router.push({
@@ -249,52 +399,42 @@ export const useAuth = () => {
     });
   };
 
-  /**
-   * Check if login modal should be open
-   */
   const isLoginModalOpen = computed(() => {
     return route.query.modal === 'login' || route.query.modal === 'register';
   });
 
-  /**
-   * Get the active auth tab from URL
-   */
   const activeAuthTab = computed(() => {
     return route.query.modal === 'register' ? 'register' : 'login';
   });
 
-  const isPro = computed(() => (user.value as AuthUser | null)?.isPro || false);
+  const isPro = computed(() => hasActiveSubscription.value);
 
   return {
-    // Session state from nuxt-auth-utils
-    session: computed(() => ({
-      user: user.value as AuthUser | null,
-      accessToken: session.value?.accessToken,
-      refreshToken: session.value?.refreshToken,
-    })),
-    user: computed(() => user.value as AuthUser | null),
+    accessToken,
+    refreshToken,
+    user,
     isLoading: readonly(isLoading),
     error: readonly(error),
-    isAuthenticated: computed(() => loggedIn.value),
-    isLocked: computed(() => !loggedIn.value || !isPro.value),
-    isAdmin: computed(() => (user.value as AuthUser | null)?.role === 'admin'),
-
-    // Auth methods
+    isAuthenticated: computed(() => !!accessToken.value && !!user.value),
+    isLocked: computed(() => !accessToken.value || !isPro.value),
+    isAdmin: computed(() => user.value?.role === 'admin'),
     login,
     register,
     logout,
     updateProfile,
     changePassword,
+    validateSession,
+    fetchWithAuth,
+    apiWithAuth,
+    setSession,
+    clearSession,
     fetchSession,
-
-    // Modal helpers
+    checkMe,
+    session,
     openLoginModal,
     closeLoginModal,
     isLoginModalOpen,
     activeAuthTab,
-
-    // Debug
-    loggedIn,
-    clearSession,
+    isPro,
   };
 };

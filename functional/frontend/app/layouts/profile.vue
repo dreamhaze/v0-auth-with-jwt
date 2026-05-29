@@ -82,12 +82,12 @@ const hasOverflowHidden = computed(() => !isVariantPage.value);
             >
               Вариант недели
             </NuxtLink>
-            <NuxtLink
+            <!-- <NuxtLink
               to="/shop"
               class="nav-link-animated text-[#333] font-serif text-[18px] uppercase"
             >
               Магазин
-            </NuxtLink>
+            </NuxtLink> -->
           </nav>
 
           <!-- Desktop Actions -->
@@ -186,12 +186,12 @@ const hasOverflowHidden = computed(() => !isVariantPage.value);
           >
             Вариант недели
           </NuxtLink>
-          <NuxtLink
+          <!-- <NuxtLink
             to="/subscriptions"
             class="w-full min-h-[58px] rounded-[10px] bg-[#f6f6f6] text-[#333] font-serif text-[18px] uppercase flex items-center px-[24px]"
           >
             Магазин
-          </NuxtLink>
+          </NuxtLink> -->
         </nav>
         <div class="mt-[60px] flex flex-col gap-[5px]">
           <template v-if="isAuthenticated">
@@ -273,14 +273,18 @@ const hasOverflowHidden = computed(() => !isVariantPage.value);
           </div>
           <div class="flex items-center justify-center gap-[5px]">
             <a
-              href="#"
+              href="https://www.youtube.com/@romankritsky"
               class="w-[30px] h-[30px] rounded-full bg-[#333] text-white flex items-center justify-center hover:opacity-75 transition-opacity"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <IconYT />
             </a>
             <a
-              href="#"
+              href="https://t.me/romankritsky"
               class="w-[30px] h-[30px] rounded-full bg-[#333] text-white flex items-center justify-center hover:opacity-75 transition-opacity"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <IconTG />
             </a>
@@ -318,14 +322,18 @@ const hasOverflowHidden = computed(() => !isVariantPage.value);
             </div>
             <div class="flex gap-[5px]">
               <a
-                href="#"
+                href="https://www.youtube.com/@romankritsky"
                 class="w-[34px] h-[34px] rounded-full bg-[#333] text-white flex items-center justify-center"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <IconYT />
               </a>
               <a
-                href="#"
+                href="https://t.me/romankritsky"
                 class="w-[34px] h-[34px] rounded-full bg-[#333] text-white flex items-center justify-center"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <IconTG />
               </a>

@@ -4,6 +4,7 @@ const props = defineProps<{
 }>();
 const config = useRuntimeConfig();
 const variant = useCurrentVariant();
+const { answer2 } = useVariantPdf();
 
 const getTaskNumber = (key: string) => {
   return key.replace('task', '').replace(/_/g, '.');
@@ -53,7 +54,7 @@ const getAnswerFromTask2 = () => taskColumnsRef.value?.answer;
 
 const formattedAnswer = computed(() => {
   if (taskType.value === 'task2') {
-    return getAnswerFromTask2() || 'Нет ответа';
+    return (answer2.value = getAnswerFromTask2() || 'Нет ответа');
   }
   if (taskType.value === 'task3' || taskType.value === 'task6') {
     return [taskData.value?.answer1, taskData.value?.answer2]
@@ -204,17 +205,21 @@ const showAnswerButton = computed(() => {
     position: absolute;
     top: 0;
     right: 0;
-    height: 200%;
+    height: 100%;
     width: 280px;
+    z-index: 10;
   }
   &:hover {
     --tw-ring-inset: inset;
     box-shadow: 0 0 0 2px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
     .anchor-for-action {
       z-index: 30;
-      .shadow-hover button {
-        box-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.1)),
-          0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
+      .task-action-btns {
+        z-index: 31;
+        button {
+          box-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.1)),
+            0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
+        }
       }
     }
   }

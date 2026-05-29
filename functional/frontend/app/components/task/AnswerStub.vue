@@ -8,9 +8,8 @@
     <span class="text-base font-medium uppercase tracking-wider">
       Ответ:
     </span>
-    <div
-      class="flex-1 border-b-2 h-[19px]"
-      style="border-color: var(--ui-border);"
-    ></div>
+    <div class="flex-1 h-[19px]">
+      _____________________________________________________________________________
+    </div>
   </div>
 </template>

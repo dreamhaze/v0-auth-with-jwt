@@ -1,228 +1,96 @@
-import type {
-  KnowledgeBasePayload,
-  Poet,
-  Work,
-} from '~/types/knowledgeBaseTypes';
+import type { KnowledgeBaseResponse } from '~/types/knowledgeBaseTypes';
 
-interface KnowledgeBaseResponse extends KnowledgeBasePayload {
-  works?: Work[];
-  poets?: Poet[];
-  _metadata?: {
-    hash: string;
-    fetchedAt: string;
-    computed: {
-      variantsCount: number;
-      poetsCount: number;
-      totalEntities: number;
-    };
-  };
-}
-
-// Полный мок с данными для разработки
-const mockData: KnowledgeBaseResponse = {
-  works: [
-    {
-      id: 1,
-      title: 'Евгений Онегин',
-      slug: 'evgeniy-onegin',
-      poetId: 1,
-      year: 1833,
-      chapters: [
-        {
-          id: 1,
-          title: 'Глава 1',
-          order: 1,
-          excerpts: [
-            {
-              id: 1,
-              title: 'Мой дядя самых честных правил',
-              order: 1,
-            },
-            {
-              id: 2,
-              title: 'Зима! Крестьянин, торжествуя',
-              order: 2,
-            },
-          ],
-        },
-        {
-          id: 2,
-          title: 'Глава 2',
-          order: 2,
-          excerpts: [
-            {
-              id: 3,
-              title: 'Деревня, где скучал Евгений',
-              order: 1,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: 'Бородино',
-      slug: 'borodino',
-      poetId: 2,
-      year: 1837,
-      chapters: [
-        {
-          id: 3,
-          title: 'Полный текст',
-          order: 1,
-          excerpts: [
-            {
-              id: 4,
-              title: 'Скажи-ка, дядя, ведь недаром',
-              order: 1,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: 'Мцыри',
-      slug: 'mtsyri',
-      poetId: 2,
-      year: 1839,
-      chapters: [
-        {
-          id: 4,
-          title: 'Часть 1',
-          order: 1,
-          excerpts: [
-            {
-              id: 5,
-              title: 'Немного лет тому назад',
-              order: 1,
-            },
-          ],
-        },
-      ],
-    },
-  ],
-  poets: [
-    {
-      id: 1,
-      name: 'Александр Пушкин',
-      slug: 'aleksandr-pushkin',
-      bio: 'Великий русский поэт',
-      worksCount: 1,
-    },
-    {
-      id: 2,
-      name: 'Михаил Лермонтов',
-      slug: 'mikhail-lermontov',
-      bio: 'Русский поэт и прозаик',
-      worksCount: 2,
-    },
-  ],
-  themes: [
-    {
-      id: 1,
-      name: 'Любовь',
-      slug: 'love',
-      worksCount: 2,
-    },
-    {
-      id: 2,
-      name: 'Природа',
-      slug: 'nature',
-      worksCount: 3,
-    },
-    {
-      id: 3,
-      name: 'Война',
-      slug: 'war',
-      worksCount: 1,
-    },
-    {
-      id: 4,
-      name: 'Свобода',
-      slug: 'freedom',
-      worksCount: 1,
-    },
-  ],
-  _metadata: {
-    hash: 'dev-mock-hash-v1',
-    fetchedAt: new Date().toISOString(),
-    computed: {
-      variantsCount: 42,
-      poetsCount: 2,
-      totalEntities: 3,
-    },
-  },
-};
+import { USE_MOCK } from '~/utils/mode/mode';
+import type { mKnowledgeBaseResponse } from './mockData';
+import { mockKnowledgeBaseResponse, mockStore } from './mockData';
 
 export function useKnowledgeBase() {
+  // В моковом режиме возвращаем сразу заглушку, даже не инициализируя запрос
+  if (USE_MOCK) {
+    const mockPending = ref(false);
+    const mockError = ref(null);
+    const mockData = ref<mKnowledgeBaseResponse>(mockKnowledgeBaseResponse);
+
+    const refresh = () => {
+      console.log('[Mock] Refresh called');
+      mockPending.value = true;
+      setTimeout(() => {
+        mockPending.value = false;
+      }, 300);
+    };
+
+    const variantsCount = computed(() => {
+      return mockData.value?._metadata?.computed?.variantsCount ?? 0;
+    });
+
+    const works = computed(() => mockKnowledgeBaseResponse.works ?? []);
+    const poets = computed(() => mockKnowledgeBaseResponse.poets ?? []);
+    const themes = computed(() => []);
+    const settings = computed(
+      () => store.settings ?? DEFAULT_KNOWLEDGE_BASE_SETTINGS,
+    );
+
+    return {
+      data: readonly(mockData),
+      works,
+      poets,
+      themes,
+      settings,
+
+      pending: readonly(mockPending),
+      error: readonly(mockError),
+      refresh,
+      variantsCount,
+      store: mockStore,
+    };
+  }
+
+  // Режим реального API
   const store = useKnowledgeBaseStore();
   const config = useRuntimeConfig();
 
-  const isDev = config.public.localMode || import.meta.dev;
-
-  // Полностью отключаем запрос в dev-режиме
-  const shouldFetch = !isDev;
-
-  const apiUrl = import.meta.server
-    ? `${config.apiBackendBase}/api`
-    : config.public.apiUrl;
+  const apiUrl = config.public.nitroApiUrl;
 
   const { data, pending, error, refresh } = useFetch<KnowledgeBaseResponse>(
     `${apiUrl}/knowledge-base`,
     {
-      // Отключаем запрос и на сервере, и на клиенте в dev-режиме
-      server: shouldFetch,
-      lazy: !shouldFetch,
-      immediate: shouldFetch,
-
+      server: true,
       key: 'knowledge-base',
       getCachedData: (key) => {
         const cached = useNuxtApp().payload.data[key];
         return cached || undefined;
       },
       transform: (response) => {
+        // Гидрация только если хеш изменился
         if (response._metadata?.hash !== store.lastKnownHash) {
-          console.log('[Store] Hydrating, new hash:', response._metadata?.hash);
           store.hydrate(response);
         }
         return response;
       },
-      onRequestError: () => {
-        console.warn('[Dev] Request failed, but we are on mock data');
-      },
     },
   );
 
-  // В dev режиме сразу инициализируем мок-данными
-  if (isDev) {
-    // Выполняется один раз при первой загрузке
-    if (!store._initialized) {
-      console.log('[Dev] Initializing store with mock data');
-      store.hydrate(mockData);
-      store._initialized = true;
-    }
-  }
-
   const variantsCount = computed(() => {
-    return (
-      store._metadata?.computed?.variantsCount ??
-      mockData._metadata!.computed.variantsCount
-    );
+    return data.value?._metadata?.computed?.variantsCount ?? 0;
   });
 
-  const works = computed(() => store.works || []);
-  const poets = computed(() => store.poets || []);
-  const themes = computed(() => store.themes || []);
+  const works = computed(() => data.value?.works ?? []);
+  const poets = computed(() => data.value?.poets ?? []);
+  const themes = computed(() => store.themes ?? {});
+  const settings = computed(
+    () => store.settings ?? DEFAULT_KNOWLEDGE_BASE_SETTINGS,
+  );
 
   return {
-    data: computed(() => (isDev ? mockData : data.value)),
+    data,
     works,
     poets,
     themes,
-    pending: computed(() => (isDev ? false : pending.value)),
-    error: computed(() => (isDev ? null : error.value)),
-    refresh: isDev ? () => Promise.resolve() : refresh,
+    settings,
+
+    pending,
+    error,
+    refresh,
     variantsCount,
     store,
   };

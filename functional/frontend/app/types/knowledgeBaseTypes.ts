@@ -263,14 +263,45 @@ export interface ThemeOption {
   disabled?: boolean;
 }
 
-export interface KnowledgeBasePayload {
+export interface KnowledgeBaseNitroResponse extends KnowledgeBasePayload {
   works?: Work[];
   poets?: Poet[];
+  block3?: Block3Data;
+  _metadata?: {
+    hash: string;
+    fetchedAt: string;
+    computed: {
+      variantsCount: number;
+      poetsCount: number;
+      totalEntities: number;
+    };
+  };
+}
+
+export interface KnowledgeBasePayload extends KnowledgeBaseResponse {
   poems?: Poem[];
   themes?: ThemeOption[];
   stats?: Record<string, any>;
-  settings?: KnowledgeBaseSettings;
+  _metadata?: {
+    hash: string;
+    fetchedAt: string;
+    computed: {
+      variantsCount: number;
+      poetsCount: number;
+      totalEntities: number;
+    };
+  };
+}
+
+export interface KnowledgeBaseResponseRaw {
+  works?: Work[];
+  poets?: Poet[];
   block3?: Block3Data;
+  settings: KnowledgeBaseSettings;
+  updatedAt: Date;
+}
+
+export interface KnowledgeBaseResponse extends KnowledgeBaseResponseRaw {
   _metadata?: {
     hash: string;
     fetchedAt: string;
