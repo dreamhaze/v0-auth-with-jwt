@@ -135,7 +135,7 @@ const cancelDelete = () => {
                 @click="variantsStore.fetchSavedVariants()"
               >
                 Попробовать снова
-              </button>  
+              </button>
             </div>
 
             <!-- Empty State -->
@@ -164,7 +164,7 @@ const cancelDelete = () => {
 
             <!-- Variants Grid -->
             <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ProfileVariantCard
+              <VariantCard
                 v-for="variant in savedVariants"
                 :key="variant.id"
                 :variant="variant"

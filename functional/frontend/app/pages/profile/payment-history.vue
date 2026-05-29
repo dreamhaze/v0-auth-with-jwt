@@ -1,7 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
   middleware: 'auth',
-  layout: 'profile',
 });
 
 const { checkPaymentsList } = usePayment();
@@ -135,22 +134,28 @@ const getTypeIcon = (type: Payment['type']) => {
     <p class="text-gray-500 mt-1">Здесь собрана история вашей оплаты</p>
   </div>
 
-  <!-- Loading State -->
-  <div v-if="isLoading" class="flex items-center justify-center py-12">
-    <UIcon
-      name="i-lucide-loader-2"
-      class="w-8 h-8 text-gray-400 animate-spin"
-    />
-  </div>
+            <!-- Loading State -->
+            <div
+              v-if="isLoading"
+              class="flex items-center justify-center py-12"
+            >
+              <UIcon
+                name="i-lucide-loader-2"
+                class="w-8 h-8 text-gray-400 animate-spin"
+              />
+            </div>
 
-  <!-- Error State -->
-  <div
-    v-else-if="error"
-    class="flex flex-col items-center justify-center py-12 text-center"
-  >
-    <UIcon name="i-lucide-alert-circle" class="w-12 h-12 text-red-400 mb-4" />
-    <p class="text-gray-600">{{ error }}</p>
-  </div>
+            <!-- Error State -->
+            <div
+              v-else-if="error"
+              class="flex flex-col items-center justify-center py-12 text-center"
+            >
+              <UIcon
+                name="i-lucide-alert-circle"
+                class="w-12 h-12 text-red-400 mb-4"
+              />
+              <p class="text-gray-600">{{ error }}</p>
+            </div>
 
   <template v-else>
     <!-- Empty State -->
@@ -224,11 +229,19 @@ const getTypeIcon = (type: Payment['type']) => {
       </div>
     </div>
 
-    <!-- Pagination placeholder -->
-    <div v-if="payments.length > 0" class="mt-6 flex justify-center">
-      <p class="text-sm text-gray-500">
-        Показано {{ payments.length }} платежей
-      </p>
+              <!-- Pagination placeholder -->
+              <div
+                v-if="payments.length > 0"
+                class="mt-6 flex justify-center"
+              >
+                <p class="text-sm text-gray-500">
+                  Показано {{ payments.length }} платежей
+                </p>
+              </div>
+            </template>
+          </main>
+        </div>
+      </div>
     </div>
-  </template>
+  </div>
 </template>

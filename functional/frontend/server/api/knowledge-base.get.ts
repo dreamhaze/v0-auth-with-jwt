@@ -10,12 +10,10 @@ interface CacheMeta {
 }
 const maxAgeNitro = 360;
 
-async function getBackendFingerprint(
-  backendUrl: string,
-): Promise<string | null> {
+async function getBackendFingerprint(config: any): Promise<string | null> {
   try {
     const cacheMeta = await $fetch<CacheMeta>(
-      `${backendUrl}/knowledge-base/cache/meta`,
+      `${config.apiBackendUrl}/knowledge-base/cache/meta`,
       { ignoreResponseError: true },
     );
 
@@ -33,29 +31,26 @@ export default defineCachedEventHandler(
   async (event) => {
     const config = useRuntimeConfig();
 
-    const backendUrl =
-      import.meta.server && !import.meta.dev
-        ? `${config.apiBackendBase}/api`
-        : config.apiBackendUrl;
-
     // 1. Получаем текущий фингерпринт бэкенда
-    const currentFingerprint = await getBackendFingerprint(backendUrl);
+    const currentFingerprint = await getBackendFingerprint(config);
 
     console.log('currentFingerprint: ', currentFingerprint);
     // 2. Проверяем сохранённый кеш в Redis
-    const cached = await useStorage('cache').getItem<{
-      payload: KnowledgeBasePayload;
-      fingerprint: string;
-    }>('knowledge-base');
+    // const cached = await useStorage('cache').getItem<{
+    //   payload: KnowledgeBasePayload;
+    //   fingerprint: string;
+    // }>('knowledge-base');
 
     // 3. Если фингерпринт совпадает — отдаём кеш
-    if (cached && cached.fingerprint === currentFingerprint) {
-      return cached.payload;
-    }
+    // if (cached && cached.fingerprint === currentFingerprint) {
+    //   return cached.payload;
+    // }
 
     // 4. Данные изменились — полный запрос к бэкенду
     console.log('[KB] Cache miss, fetching full data...');
-    const rawPayload = await $fetch<any>(`${backendUrl}/knowledge-base`);
+    const rawPayload = await $fetch<any>(
+      `${config.apiBackendUrl}/knowledge-base`,
+    );
 
     // 5. Преобразуем тяжёлый backend payload в лёгкий frontend payload
     const lightPayload = transformToKnowledgeBasePayload(rawPayload);
@@ -68,10 +63,10 @@ export default defineCachedEventHandler(
     );
 
     // 6. Сохраняем в Redis
-    await useStorage('cache').setItem('knowledge-base', {
-      payload: enrichedPayload,
-      fingerprint: currentFingerprint,
-    });
+    // await useStorage('cache').setItem('knowledge-base', {
+    //   payload: enrichedPayload,
+    //   fingerprint: currentFingerprint,
+    // });
 
     console.log('[KB] Cache updated');
     return enrichedPayload;

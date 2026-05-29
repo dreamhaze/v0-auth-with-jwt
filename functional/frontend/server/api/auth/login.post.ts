@@ -5,39 +5,24 @@
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
-  const backendUrl =
-    import.meta.server && !import.meta.dev
-      ? `${config.apiBackendBase}/api`
-      : config.apiBackendUrl;
 
   try {
     const body = await readBody(event);
 
     // Proxy login request to backend
-    const loginUrl = `${backendUrl}/auth/login`;
-    console.log('[Login endpoint] Proxying to backend:', loginUrl);
-    const response = await fetch(loginUrl, {
+    const response = await fetch(`${config.apiBackendUrl}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
       const error = await response.json().catch(() => ({}));
-      let errorJson;
-      try {
-        errorJson = JSON.parse(errorText);
-      } catch {
-        errorJson = { detail: errorText };
-      }
       throw createError({
         statusCode: response.status,
-        statusMessage:
-          errorJson.detail ||
-          errorJson.message ||
-          error.detail ||
-          'Login failed',
+        statusMessage: error.detail || 'Login failed',
       });
     }
 
@@ -67,7 +52,7 @@ export default defineEventHandler(async (event) => {
     };
   } catch (error) {
     console.error('Login error:', error);
-    if (error?.statusCode) {
+    if (error.statusCode) {
       throw error;
     }
     throw createError({

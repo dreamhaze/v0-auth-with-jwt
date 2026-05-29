@@ -8,12 +8,14 @@ const {
   printVariant,
   saveVariantToProfile,
   generateShareableLink,
+  generateShareableLink,
 } = useVariantExport();
 
 const { generatePdf, isDownloadingPdf, collectAllAnswers } = useVariantPdf();
 
 const handleDownload = async () => {
   if (!isAuthenticated.value) {
+    showPaywall();
     showPaywall();
     return;
   }
@@ -27,6 +29,7 @@ const handleDownload = async () => {
 
 const handlePrint = () => {
   if (!isAuthenticated.value) {
+    showPaywall();
     showPaywall();
     return;
   }
@@ -47,6 +50,12 @@ const handleSave = async () => {
 };
 
 const handleShare = async () => {
+  if (!isAuthenticated.value) {
+    showPaywall();
+    return;
+  }
+  await generateShareableLink();
+};
   if (!isAuthenticated.value) {
     showPaywall();
     return;

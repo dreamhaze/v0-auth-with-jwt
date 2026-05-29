@@ -1,7 +1,7 @@
 <template>
   <svg
     stroke="currentColor"
-    fill="white"
+    fill="currentColor"
     stroke-width="0"
     viewBox="0 0 576 512"
     height="18"

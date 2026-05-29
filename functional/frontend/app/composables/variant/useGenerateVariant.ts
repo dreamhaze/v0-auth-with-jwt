@@ -1,8 +1,8 @@
-import type { GeneratedVariant } from '@/types/generatedVariant';
+import type { GeneratedVariant } from '@/types/generatedVariant'
 import type {
   RuntimeVariantBlockKey,
   VariantTaskKey,
-} from '@/types/variantTasks';
+} from '@/types/variantTasks'
 
 export const useGenerateVariant = () => {
   const {
@@ -140,11 +140,12 @@ export const useGenerateVariant = () => {
       statusMessage.value = '';
       checkedAnswers.value.clear();
     } catch (e) {
-      statusMessage.value = (e as Error).message || 'Ошибка генерации варианта';
+      statusMessage.value = (e as Error).message || 'Ошибка генерации варианта'
     }
-  };
+  }
 
   /**
+   * Generate new random variant - requires authentication
    * Generate new random variant - requires authentication
    */
   const generateVariant = async () => {
@@ -154,11 +155,12 @@ export const useGenerateVariant = () => {
       return;
     }
 
-    refreshLoadingByBlock.value.block1 = true;
-    refreshLoadingByBlock.value.block2 = true;
-    refreshLoadingByBlock.value.block3 = true;
+    refreshLoadingByBlock.value.block1 = true
+    refreshLoadingByBlock.value.block2 = true
+    refreshLoadingByBlock.value.block3 = true
 
     try {
+      const data = await apiWithAuth<{ variant: GeneratedVariant }>(
       const data = await apiWithAuth<{ variant: GeneratedVariant }>(
         '/variants/runtime/generate',
         {
@@ -176,11 +178,11 @@ export const useGenerateVariant = () => {
     } catch (e) {
       statusMessage.value = (e as Error).message || 'Ошибка генерации варианта';
     } finally {
-      refreshLoadingByBlock.value.block1 = false;
-      refreshLoadingByBlock.value.block2 = false;
-      refreshLoadingByBlock.value.block3 = false;
+      refreshLoadingByBlock.value.block1 = false
+      refreshLoadingByBlock.value.block2 = false
+      refreshLoadingByBlock.value.block3 = false
     }
-  };
+  }
 
   /**
    * Refresh block - requires authentication
@@ -195,7 +197,7 @@ export const useGenerateVariant = () => {
       return;
     }
 
-    refreshLoadingByBlock.value[block] = true;
+    refreshLoadingByBlock.value[block] = true
     try {
       const payload: any = {
         ...buildPayload(block === 'block1'),
@@ -213,6 +215,7 @@ export const useGenerateVariant = () => {
         {
           method: 'POST',
           body: payload,
+          body: payload,
         },
       );
       variant.value = data.variant;
@@ -221,11 +224,13 @@ export const useGenerateVariant = () => {
       statusMessage.value =
         (e as Error).message || `Ошибка обновления блока ${block}`;
     } finally {
-      refreshLoadingByBlock.value[block] = false;
+      refreshLoadingByBlock.value[block] = false
     }
-  };
+  }
 
   /**
+   * Refresh individual task - requires authentication
+   * For task11 tasks: increment counter (max 3)
    * Refresh individual task - requires authentication
    * For task11 tasks: increment counter (max 3)
    */

@@ -86,6 +86,14 @@ export const useVariantState = () => {
     () => false,
   );
 
+  // Free tier restrictions
+  const task11Refreshes = useState<number>('variant-task11-refreshes', () => 0);
+  const cachedPreGeneratedVariant = useState('variant-cached-pregenerated', () => null);
+  const hasCachedPreGeneratedVariant = useState<boolean>(
+    'variant-has-cached-pregenerated',
+    () => false,
+  );
+
   return {
     variant,
     taskHistory,
@@ -107,6 +115,10 @@ export const useVariantState = () => {
     selectedThemeId,
     selectedChapter,
     useSelected,
+    // Free tier
+    task11Refreshes,
+    cachedPreGeneratedVariant,
+    hasCachedPreGeneratedVariant,
     // Free tier
     task11Refreshes,
     cachedPreGeneratedVariant,

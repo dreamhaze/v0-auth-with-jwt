@@ -20,7 +20,7 @@ const handleRegister = () => {
 
 const handleSubscribe = () => {
   closePaywall();
-  router.push('/profile/subscription');
+  router.push('/payments');
 };
 
 const handleSubscriptionsInfo = () => {

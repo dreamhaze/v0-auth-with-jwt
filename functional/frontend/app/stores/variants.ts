@@ -45,8 +45,8 @@ export const useVariantsStore = defineStore('variants', () => {
    * Fetch saved variants from backend
    */
   const fetchSavedVariants = async () => {
-    isLoading.value = true;
-    error.value = null;
+    isLoading.value = true
+    error.value = null
     try {
       const data = await authApi.apiWithAuth<SavedVariantsResponse>(
         '/variants',
@@ -54,22 +54,22 @@ export const useVariantsStore = defineStore('variants', () => {
       savedVariants.value = data.items || [];
       return data.items;
     } catch (err) {
-      const fetchError = err as { data?: { message?: string } };
+      const fetchError = err as { data?: { message?: string } }
       error.value =
-        fetchError?.data?.message || 'Ошибка загрузки сохраненных вариантов';
-      console.error('[v0] Fetch saved variants error:', err);
-      throw err;
+        fetchError?.data?.message || 'Ошибка загрузки сохраненных вариантов'
+      console.error('[v0] Fetch saved variants error:', err)
+      throw err
     } finally {
-      isLoading.value = false;
+      isLoading.value = false
     }
-  };
+  }
 
   /**
    * Save current variant to profile
    */
   const saveVariant = async (variant: GeneratedVariant) => {
-    isLoading.value = true;
-    error.value = null;
+    isLoading.value = true
+    error.value = null
     try {
       const response = await authApi.apiWithAuth('/variants', {
         method: 'POST',
@@ -86,25 +86,26 @@ export const useVariantsStore = defineStore('variants', () => {
         createdAt: response.createdAt || new Date().toISOString(),
         updatedAt: response.updatedAt || new Date().toISOString(),
         variant,
-      };
-      savedVariants.value.unshift(newVariant);
-      return newVariant;
+      }
+      savedVariants.value.unshift(newVariant)
+      return newVariant
     } catch (err) {
-      const fetchError = err as { data?: { message?: string } };
-      error.value = fetchError?.data?.message || 'Ошибка сохранения варианта';
-      console.error('[v0] Save variant error:', err);
-      throw err;
+      const fetchError = err as { data?: { message?: string } }
+      error.value =
+        fetchError?.data?.message || 'Ошибка сохранения варианта'
+      console.error('[v0] Save variant error:', err)
+      throw err
     } finally {
-      isLoading.value = false;
+      isLoading.value = false
     }
-  };
+  }
 
   /**
    * Delete variant
    */
   const deleteVariant = async (variantId: number) => {
-    isLoading.value = true;
-    error.value = null;
+    isLoading.value = true
+    error.value = null
     try {
       await authApi.apiWithAuth(`/variants/${variantId}`, {
         method: 'DELETE',
@@ -113,14 +114,15 @@ export const useVariantsStore = defineStore('variants', () => {
         (v) => v.id !== variantId,
       );
     } catch (err) {
-      const fetchError = err as { data?: { message?: string } };
-      error.value = fetchError?.data?.message || 'Ошибка удаления варианта';
-      console.error('[v0] Delete variant error:', err);
-      throw err;
+      const fetchError = err as { data?: { message?: string } }
+      error.value =
+        fetchError?.data?.message || 'Ошибка удаления варианта'
+      console.error('[v0] Delete variant error:', err)
+      throw err
     } finally {
-      isLoading.value = false;
+      isLoading.value = false
     }
-  };
+  }
 
   /**
    * Get variant by ID

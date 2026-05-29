@@ -52,8 +52,9 @@ export function useKnowledgeBase() {
   const apiUrl = config.public.nitroApiUrl;
 
   const { data, pending, error, refresh } = useFetch<KnowledgeBaseResponse>(
-    `${apiUrl}/knowledge-base`,
+    '/api/knowledge-base',
     {
+      server: true,
       server: true,
       key: 'knowledge-base',
       getCachedData: (key) => {
@@ -61,6 +62,7 @@ export function useKnowledgeBase() {
         return cached || undefined;
       },
       transform: (response) => {
+        // Гидрация только если хеш изменился
         // Гидрация только если хеш изменился
         if (response._metadata?.hash !== store.lastKnownHash) {
           store.hydrate(response);
@@ -72,6 +74,7 @@ export function useKnowledgeBase() {
 
   const variantsCount = computed(() => {
     return data.value?._metadata?.computed?.variantsCount ?? 0;
+    return data.value?._metadata?.computed?.variantsCount ?? 0;
   });
 
   const works = computed(() => data.value?.works ?? []);
@@ -82,6 +85,7 @@ export function useKnowledgeBase() {
   );
 
   return {
+    data,
     data,
     works,
     poets,

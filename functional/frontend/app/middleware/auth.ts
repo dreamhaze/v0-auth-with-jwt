@@ -1,6 +1,6 @@
 /**
  * Auth middleware using nuxt-auth-utils
- *
+ * 
  * This middleware protects routes that require authentication.
  * Use by adding `definePageMeta({ middleware: 'auth' })` to pages.
  */
